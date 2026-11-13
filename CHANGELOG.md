@@ -1,88 +1,43 @@
 # Changelog
 
-All notable changes to this project are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## 1.0.0 — 2026-11-13
 
-## [0.3.0] - 2026-11-08
+首个正式版。fork 自 [dsh-memory-sync 0.3.0](https://github.com/QIC-9821/dsh-memory-sync)（MIT），
+在原「记忆同步」之上加了「整机搬家」的能力。
 
-### Added
+### 新功能
 
-- Desktop settings page in the system settings sidebar: test peer, manual
-  both/push/pull, transport switch, custom rules, offline export/import, logs,
-  snapshot restore.
-- Android `Config` schema form (schemastery bundled into the tablet zip) under
-  Settings → Extensions → Installed plugins.
-- Custom rules: `intervalSendMinutes` (scheduled send), `conflict`
-  (`local`/`peer`), `replyOnReceive` (one reply snapshot after applying),
-  plus the existing `runOnStartup` / `autoApply`.
-- Offline transport: export/import portable `.json.gz` snapshots with dry-run
-  preview and backups; new `memory_sync` actions `export` / `import`.
-- `/memory-sync/api/*` settings API, local/same-origin only; secrets are never
-  echoed. `/mem/ping` reports protocol version 3 and a read-only rules summary.
-- Manual pushes send `x-mem-apply: manual` so they merge even when the peer
-  keeps `autoApply` off; reply pushes add `x-mem-no-reply: 1` to stop loops.
-- `scripts/build-tablet.mjs` + verification: esbuild bundle, root
-  `package.json`, no BOM, no web client, `Config` present.
+- **整机迁移包**：扫描当前 profile 的 `dependencies` 和 `dsh.profile.bundles`，把已装插件 + 记忆快照打成一个能搬走的包。
+  - `lite`（轻量包）：只带本地 tgz / link 目录，npm 插件记录版本，接收端联网安装。
+  - `full`（完整包）：所有插件 `npm pack` 成 tgz，接收端完全离线安装。
+- **安装脚本 `install.ps1`**：自动找 DSH（注册表 → 常见路径）、选 profile、备份配置、装插件、改 bundles、合并记忆、确认后重启。
+  - `-DryRun` 预演，不改任何东西。
+  - `-Yes` 跳过重启确认（谨慎使用）。
+- **重启前会话检测**：3 秒 CPU 差分判断 DSH 是否有会话在跑；有会话连问三次才重启，空闲只问一次。
+- **设置页「记忆搬家」**：在 DSH 设置里选打包方式、输出位置（可直接输入或浏览文件夹）、是否压 zip、是否带记忆；显示结果和已有包列表。
+- **目录浏览接口** `/memory-sync/api/browse`：调用 Windows 原生文件夹选择器。
+- **工具参数扩展**：`memory_sync action=pack` 支持 `mode` / `profile` / `out` / `zip` / `includeMemory`。
 
-### Changed
+### 保留自原插件
 
-- `runHttpSync` takes a direction (`both` / `push` / `pull`); manual pushes can
-  bypass the peer's automatic-apply policy.
-- Applying snapshots now uses the receiver's `conflict` preference instead of
-  the old hard-coded protected list; every overwrite is backed up.
-- HTTP status no longer probes git; git inspection only runs in SSH mode.
-- `peerPort` is configurable for SSH.
+- 局域网快照同步（HTTP 直连、共享密钥、覆盖前备份）
+- 离线快照导出 / 导入（`.json.gz`）
+- 冲突规则（local / peer）、定时推送、收到后回发
+- SSH 三段式同步
 
-## [0.2.0] - 2026-11-08
+### 修复 / 加固
 
-### Added
+- `readDshVersion` 增加注册表兜底，manifest 里能正确带上 DSH 版本。
+- 渲染层模块 id 唯一化，避免与 `dsh-memory-sync` 同时安装时重复注册。
+- 打包时 link 插件连 `node_modules` 一起带走，保证接收端离线可用。
 
-- HTTP snapshot transport for Android tablets: push/pull, snapshot retention,
-  restore and a hub server with `x-mem-secret` auth.
-- `keepSnapshots` / `maxSnapshotMB` retention limits and `.bak-snapshot`
-  backups on overwrite.
+### 已知限制
 
-## [0.1.2] - 2026-11-06
+- 只支持 Windows（安装脚本依赖 PowerShell 与注册表）。
+- `full` 包体积取决于 npm 插件大小，可能超过 200 MB。
+- 杀毒软件可能拦截安装脚本（会改配置、结束进程、重启 DSH），需要手动放行。
+- 不处理 DSH 版本降级；manifest 里记录来源版本供参考，但脚本目前不强制校验。
 
-### Added
+## 0.3.0 — 上游 dsh-memory-sync
 
-- README demo screenshots: what `memory_sync status` returns after a run, and
-  what the three-phase startup log looks like.
-
-## [0.1.1] - 2026-11-05
-
-### Changed
-
-- Repository renamed from `QIC-9821/dsh` to `QIC-9821/dsh-memory-sync`, so the
-  GitHub repo matches the npm package name. All metadata, badges and install
-  links point at the new URL (the old URL redirects).
-- `package.json` description is now a single English sentence: it is what npm
-  and plugin directories use as the English description, and the Chinese copy
-  lives in `locale/zh.json` and the README.
-
-## [0.1.0] - 2026-11-05
-
-First public release.
-
-### Added
-
-- Three-phase startup sync: local pull/commit/push → peer commit over ssh → local
-  pull again, so both machines end on the same commit.
-- `peer` and `local` modes; `repoPath`, `remote`, `branch`, `peerHost`,
-  `peerUser`, `peerKeyPath`, `peerCommand` and timeouts are configurable.
-- Startup grace window (`startupGraceSec`, default 300 s) so hot reloads do not
-  trigger a sync.
-- Retry once after `retryDelaySec` (60 s), then silent self-heal every
-  `healIntervalSec` (600 s) until the sync succeeds.
-- Optional OS dialog on final failure (`notifyOnFailure`).
-- Optional machine snapshot written before each sync and committed with it
-  (`statusFile`).
-- `memory_sync` tool for agents: `{"action":"run"}` and `{"action":"status"}`.
-- Lock file and `last-run.json` / `sync.log` under `$DSH_HOME/memory-sync/`.
-- Tests covering dirty-tree commits, rebase over a peer commit, non-repo errors,
-  lock exclusivity and staleness, and config normalization.
-
-[0.1.0]: https://github.com/QIC-9821/dsh-memory-sync/releases/tag/v0.1.0
-
-[0.1.1]: https://github.com/QIC-9821/dsh-memory-sync/releases/tag/v0.1.1
+上游历史见 [原仓库 CHANGELOG](https://github.com/QIC-9821/dsh-memory-sync/blob/main/CHANGELOG.md)。
