@@ -1,0 +1,8 @@
+- insert:
+    - id: dsh-migrate
+      name: 'dsh-migrate'
+      config:
+        enabled: true
+        runOnStartup: true
+        mode: peer
+        repoPath: ''
