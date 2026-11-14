@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.5.0 — 2026-11-14
+
+设置页重做，分「新手 / 老手」两种模式。
+
+- **新手模式**：只选完整度（精简 / 标准 / 全量）+ 输出位置，其余由工具决定。
+- **老手模式**：插件打包（轻量 / 完整）、额外内容（配置 / 会话 / 附件 / 世界）、zip、记忆快照全部自选。
+- 打包接口新增 `preset`（essential / standard / everything）与 `include`（细粒度覆盖）。
+- 实测三档体积：精简 2 文件 / 0 MB，标准 49 文件 / 21.8 MB，全量 197 文件 / 91 MB。
+
+## 0.4.0 — 2026-11-14
+
+**搬运范围从「插件 + 记忆」扩展到「整机」**。
+
+- 新增 `lib/bundle-extra.mjs`：收集 `config`（profile 的 package.json + patch）、`sessions`、`attachments`、`worlds`，**每个文件算 sha256** 写进 manifest。
+- `install.ps1` 新增第 7.2 段：逐文件校验 sha256 → 恢复 → 覆盖前备份 `.bak-migrate` → 恢复 config 时**改写源机绝对路径**。
+- 修掉一个中文路径 bug：`install.ps1` 改为 **UTF-8 BOM** 写入，否则 PowerShell 5.1 按系统代码页读脚本，内嵌 manifest 里的中文路径全乱码（实测 49 个文件只认出 32 个）。
+
+## 0.3.0 — 2026-11-14
+
+**启动体检**（学自 plugin-porter）。
+
+- 新增 `lib/boot-check.mjs`：复刻 DSH 启动校验——profile 清单合法、每个 bundle 有 `dsh.bundle.patch`、patch 文件存在且可解析、**patch 的 id 不重复**。
+- 暴露成工具：`memory_sync action=boot`。
+- 打包时 `ensureBundleField()`：本地插件快照缺 `dsh.bundle` 时只补副本，不动源码，manifest 标 `bundleFieldAdded`。
+
 ## 1.0.0 — 2026-11-13
 
 首个正式版。fork 自 [dsh-memory-sync 0.3.0](https://github.com/QIC-9821/dsh-memory-sync)（MIT），

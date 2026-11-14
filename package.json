@@ -1,6 +1,6 @@
 {
   "name": "dsh-migrate",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "description": "Migrate a DSH profile to another machine: pack installed plugins + memory snapshot, generate an installer that verifies the target, installs plugins, merges memory and restarts DSH with confirmation. Forked from dsh-memory-sync (MIT, QIC-9821).",
   "type": "module",
   "license": "MIT",
