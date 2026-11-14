@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0 — 2026-11-14
+
+打包改用**自己的流式 zip**，支持分卷。
+
+- 新增 `lib/zip-stream.mjs`：自己写 local header / central directory / EOCD。
+  - 每个条目置 **UTF-8 标志位（0x0800）**——中文文件名换到任何系统都不乱码。
+  - 小文件（≤64MB）一次读入算 CRC32 + deflate；大文件**流式读入**，内存恒定。
+  - 超过单卷上限（默认 1.8GB）自动切卷：`pack.zip`、`pack-part2.zip`……
+- `zipPack()` 不再调用 PowerShell `Compress-Archive`：那个会整包缓冲（多 GB 直接 OOM），且按本地代码页存文件名。
+- 实测：70MB 单文件 + 中文文件名 → 分两卷写出 → `Expand-Archive` 解压后字节数完整、中文名保留。
+
 ## 1.2.0 — 2026-11-14
 
 新手引导。
