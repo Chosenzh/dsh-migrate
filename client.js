@@ -68,6 +68,18 @@ window.__ModuleLoader__.load({
       '.dm-pack{border-left:2px solid var(--gold);padding:2px 0 2px 10px;font-size:12px;color:var(--soft);word-break:break-all}',
       '.dm-pack b{color:var(--ink);font-weight:600}',
       '.dm-empty{color:var(--soft);font-size:12px;padding:4px 0}',
+      '.dm-guide{border:1px solid var(--gold);border-radius:14px;padding:16px 18px;background:rgba(196,154,82,.06);display:flex;flex-direction:column;gap:10px}',
+      '.dm-guide-head{display:flex;align-items:center;gap:10px}',
+      '.dm-guide-dots{display:flex;gap:5px;flex:1}',
+      '.dm-guide-dot{width:6px;height:6px;border-radius:50%;background:var(--line);display:inline-block}',
+      '.dm-guide-dot.on{background:var(--gold)}',
+      '.dm-guide-count{font-size:11px;color:var(--soft);letter-spacing:.1em}',
+      '.dm-guide-x{background:none;border:0;color:var(--soft);font-size:18px;line-height:1;cursor:pointer;padding:0 2px}',
+      '.dm-guide-x:hover{color:var(--ink)}',
+      '.dm-guide-title{margin:0;font:600 16px/1.4 var(--serif,Georgia,"Songti SC",serif);color:var(--ink)}',
+      '.dm-guide-body{margin:0;font-size:13px;line-height:1.8;color:var(--ink)}',
+      '.dm-guide-note{margin:0;font-size:12px;color:var(--soft);font-style:italic}',
+      '.dm-guide-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:2px}',
     ].join('\n')
 
     function ensureCss() {
@@ -114,6 +126,73 @@ window.__ModuleLoader__.load({
       worlds: '世界',
     }
 
+    // ---------- 新手引导 ----------
+    const GUIDE_KEY = 'dsh-migrate/guide-seen'
+
+    function guideSeen() {
+      try {
+        if (typeof localStorage === 'undefined') return true
+        return localStorage.getItem(GUIDE_KEY) === '1'
+      } catch {
+        return true
+      }
+    }
+
+    function markGuideSeen() {
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem(GUIDE_KEY, '1')
+      } catch {
+        // ignore
+      }
+    }
+
+    const GUIDE_STEPS = [
+      {
+        title: '这是干什么的',
+        body: '把这一台 DSH 的「插件 + 配置 + 会话 + 记忆」打成一个包。换电脑时不用重新配一遍，跑个脚本就都回来了。',
+        note: '不是备份到网盘，是打包带走。',
+      },
+      {
+        title: '包里会有什么',
+        body: '一个文件夹（或一个 .zip）：插件本体、配置、你的聊天记录、记忆快照，再加一个 install.ps1 安装脚本。',
+        note: '脚本跟着包走，新电脑不用先装这个插件。',
+      },
+      {
+        title: '新电脑怎么用',
+        body: '① 把包拷过去 → ② 先跑 install.ps1 -DryRun 预演一遍 → ③ 没问题再去掉 -DryRun 真跑。',
+        note: '预演不会改任何东西，只是告诉你它准备干什么。',
+      },
+      {
+        title: '那就开始吧',
+        body: '新手模式只要选两样：完整度、放哪。其他我都替你想好了。想细调就切到「老手」。',
+        note: '这个引导随时可以在右上角重新打开。',
+      },
+    ]
+
+    function GuideCard({ step, onNext, onPrev, onClose }) {
+      const info = GUIDE_STEPS[step] || GUIDE_STEPS[0]
+      const last = step >= GUIDE_STEPS.length - 1
+      return h(
+        'div',
+        { className: 'dm-guide' },
+        h('div', { className: 'dm-guide-head' },
+          h('span', { className: 'dm-guide-dots' },
+            ...GUIDE_STEPS.map((_, i) =>
+              h('i', { key: i, className: 'dm-guide-dot' + (i === step ? ' on' : '') }))),
+          h('span', { className: 'dm-guide-count' }, (step + 1) + ' / ' + GUIDE_STEPS.length),
+          h('button', { className: 'dm-guide-x', onClick: onClose, title: '关闭引导' }, '×'),
+        ),
+        h('h3', { className: 'dm-guide-title' }, info.title),
+        h('p', { className: 'dm-guide-body' }, info.body),
+        h('p', { className: 'dm-guide-note' }, info.note),
+        h('div', { className: 'dm-guide-actions' },
+          h('button', { className: 'dm-btn dm-btn-ghost', onClick: onClose }, '跳过'),
+          h('button', { className: 'dm-btn', onClick: onPrev, disabled: step === 0 }, '上一步'),
+          h('button', { className: 'dm-btn dm-btn-primary', onClick: onNext }, last ? '开始打包' : '下一步'),
+        ),
+      )
+    }
+
     function MigrateSection() {
       const [view, setView] = useState('beginner')
       const [preset, setPreset] = useState('standard')
@@ -126,6 +205,8 @@ window.__ModuleLoader__.load({
       const [error, setError] = useState('')
       const [result, setResult] = useState(null)
       const [packs, setPacks] = useState([])
+      const [guide, setGuide] = useState(() => (guideSeen() ? -1 : 0))
+
 
       useEffect(() => {
         ensureCss()
@@ -211,10 +292,39 @@ window.__ModuleLoader__.load({
           'div',
           { className: 'dm-head' },
           h('span', { className: 'dm-eyebrow' }, 'dsh-migrate'),
-          h('h2', { className: 'dm-title' }, '记忆搬家'),
+          h(
+            'div',
+            { className: 'dm-row', style: { justifyContent: 'space-between', alignItems: 'flex-start' } },
+            h('h2', { className: 'dm-title' }, '记忆搬家'),
+            h('button', {
+              className: 'dm-btn dm-btn-ghost',
+              style: { padding: '4px 10px', fontSize: '12px' },
+              onClick: () => setGuide(0),
+              title: '再看一遍新手引导',
+            }, '新手引导'),
+          ),
           h('p', { className: 'dm-sub' },
             '把这一台 DSH 的插件、配置、会话、记忆打成能搬走的包。到了新电脑，跑一遍包里的 install.ps1 就都回来了。'),
         ),
+
+        guide >= 0
+          ? h(GuideCard, {
+              step: guide,
+              onNext: () => {
+                if (guide >= GUIDE_STEPS.length - 1) {
+                  markGuideSeen()
+                  setGuide(-1)
+                } else {
+                  setGuide(guide + 1)
+                }
+              },
+              onPrev: () => setGuide(Math.max(0, guide - 1)),
+              onClose: () => {
+                markGuideSeen()
+                setGuide(-1)
+              },
+            })
+          : null,
 
         h(
           'div',
